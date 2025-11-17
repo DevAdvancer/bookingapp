@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getDriverProfile } from './actions'
-import DriverDashboardClient from './dashboard-client'
+import { getDriverProfile } from '../actions'
+import DriverVerificationClient from './verification-client'
 
-export default async function DriverPage() {
+export default async function DriverVerificationPage() {
   const supabase = await createClient()
 
   // Check if user is authenticated
@@ -38,5 +38,5 @@ export default async function DriverPage() {
   // Get driver profile
   const profile = await getDriverProfile(user.id)
 
-  return <DriverDashboardClient user={user} profile={profile} />
+  return <DriverVerificationClient user={user} profile={profile} />
 }

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import Link from 'next/link'
+import { getPassengerRides } from './actions'
+import PassengerDashboardClient from './passenger-client'
 
 export default async function PassengersPage() {
   const supabase = await createClient()
@@ -34,12 +35,10 @@ export default async function PassengersPage() {
     }
   }
 
-  async function signOut() {
-    'use server'
-    const supabase = await createClient()
-    await supabase.auth.signOut()
-    redirect('/')
-  }
+  // Get passenger's rides
+  const rides = await getPassengerRides(user.id)
+
+  return <PassengerDashboardClient user={user} initialRides={rides} />
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
@@ -56,7 +55,7 @@ export default async function PassengersPage() {
             <form action={signOut}>
               <button
                 type="submit"
-                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                className="px-6 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
               >
                 Sign Out
               </button>
