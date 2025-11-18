@@ -9,7 +9,7 @@ interface BookingFormProps {
   onLocationUpdate: (location: Location, type: 'pickup' | 'dropoff') => void
   calculation: RideCalculation | null
   availableDrivers: AvailableDriver[]
-  onBook: (driverId: string) => void
+  onBook: (driverId: string, isScheduled: boolean, scheduledDate?: string, scheduledTime?: string) => void
   booking: boolean
 }
 
@@ -37,6 +37,9 @@ export default function BookingForm({
   const [searching, setSearching] = useState<'pickup' | 'dropoff' | null>(null)
   const [gettingLocation, setGettingLocation] = useState<'pickup' | 'dropoff' | null>(null)
   const [calculating, setCalculating] = useState(false)
+  const [isScheduled, setIsScheduled] = useState(false)
+  const [scheduledDate, setScheduledDate] = useState('')
+  const [scheduledTime, setScheduledTime] = useState('')
 
   // Search for address using OpenStreetMap Nominatim (Free)
   useEffect(() => {
@@ -281,7 +284,19 @@ export default function BookingForm({
       alert('Please select a driver')
       return
     }
-    onBook(selectedDriver)
+
+    if (isScheduled && (!scheduledDate || !scheduledTime)) {
+      alert('Please select both date and time for scheduled ride')
+      return
+    }
+
+    onBook(selectedDriver, isScheduled, scheduledDate, scheduledTime)
+  }
+
+  // Get minimum date (today)
+  const getMinDate = () => {
+    const today = new Date()
+    return today.toISOString().split('T')[0]
   }
 
   return (
@@ -412,6 +427,46 @@ export default function BookingForm({
         {dropoffLocation && (
           <div className="mt-2 p-2 bg-green-50 rounded text-sm text-green-800">
             ✓ Selected: {dropoffLocation.address}
+          </div>
+        )}
+      </div>
+
+      {/* Scheduling Option */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isScheduled}
+            onChange={(e) => setIsScheduled(e.target.checked)}
+            className="w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
+          />
+          <div>
+            <h3 className="font-semibold text-gray-900">Schedule for Later</h3>
+            <p className="text-sm text-gray-600">Book a ride for a specific date and time</p>
+          </div>
+        </label>
+
+        {isScheduled && (
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+              <input
+                type="date"
+                value={scheduledDate}
+                onChange={(e) => setScheduledDate(e.target.value)}
+                min={getMinDate()}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+              <input
+                type="time"
+                value={scheduledTime}
+                onChange={(e) => setScheduledTime(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
+              />
+            </div>
           </div>
         )}
       </div>

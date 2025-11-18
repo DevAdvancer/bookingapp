@@ -28,6 +28,11 @@ export interface Ride {
 
   status: RideStatus
 
+  // Scheduling fields
+  is_scheduled: boolean
+  scheduled_date?: string | null
+  scheduled_time?: string | null
+
   requested_at: string
   accepted_at?: string | null
   started_at?: string | null
@@ -65,4 +70,7 @@ export interface BookingRequest {
   distance_km: number
   estimated_cost: number
   office_hours_applied: boolean
+  is_scheduled?: boolean
+  scheduled_date?: string
+  scheduled_time?: string
 }

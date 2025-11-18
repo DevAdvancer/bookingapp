@@ -124,20 +124,35 @@ export async function bookRide(
   try {
     const supabase = await createClient()
 
-    // Start a transaction by checking and updating driver availability atomically
+    // Check and create driver availability if it doesn't exist
     const { data: availability, error: availError } = await supabase
       .from('driver_availability')
       .select('is_available, current_ride_id')
       .eq('driver_id', booking.driver_id)
-      .single()
+      .maybeSingle()
 
-    if (availError) {
+    // If no availability record exists, create one
+    if (!availability && availError?.code === 'PGRST116') {
+      const { error: insertError } = await supabase
+        .from('driver_availability')
+        .insert({
+          driver_id: booking.driver_id,
+          is_available: true,
+          current_ride_id: null,
+          last_updated: new Date().toISOString(),
+        })
+
+      if (insertError) {
+        console.error('Error creating availability:', insertError)
+        return { success: false, error: 'Failed to initialize driver availability' }
+      }
+    } else if (availError) {
       console.error('Error checking availability:', availError)
       return { success: false, error: 'Failed to check driver availability' }
     }
 
     // Check if driver is available
-    if (!availability || !availability.is_available) {
+    if (availability && !availability.is_available) {
       return {
         success: false,
         error: 'This driver is no longer available. Please select another driver.',
@@ -153,12 +168,15 @@ export async function bookRide(
         pickup_address: booking.pickup.address,
         pickup_lat: booking.pickup.lat,
         pickup_lng: booking.pickup.lng,
-   dropoff_address: booking.dropoff.address,
+        dropoff_address: booking.dropoff.address,
         dropoff_lat: booking.dropoff.lat,
         dropoff_lng: booking.dropoff.lng,
         distance_km: booking.distance_km,
         estimated_cost: booking.estimated_cost,
         office_hours_applied: booking.office_hours_applied,
+        is_scheduled: booking.is_scheduled || false,
+        scheduled_date: booking.scheduled_date || null,
+        scheduled_time: booking.scheduled_time || null,
         status: 'pending',
       })
       .select()

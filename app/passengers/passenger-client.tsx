@@ -84,7 +84,7 @@ export default function PassengerDashboardClient({
     }
   }
 
-  const handleBook = async (driverId: string) => {
+  const handleBook = async (driverId: string, isScheduled: boolean, scheduledDate?: string, scheduledTime?: string) => {
     if (!pickup || !dropoff || !calculation) {
       setError('Please calculate the ride cost first')
       return
@@ -101,12 +101,15 @@ export default function PassengerDashboardClient({
       distance_km: calculation.distance_km,
       estimated_cost: calculation.total_cost,
       office_hours_applied: calculation.office_hours_applied,
+      is_scheduled: isScheduled,
+      scheduled_date: scheduledDate,
+      scheduled_time: scheduledTime,
     })
 
     setBooking(false)
 
     if (result.success) {
-      setSuccess('Ride booked successfully!')
+      setSuccess(isScheduled ? 'Ride scheduled successfully!' : 'Ride booked successfully!')
       // Reset form
       setPickup(null)
       setDropoff(null)

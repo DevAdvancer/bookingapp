@@ -273,3 +273,201 @@ export async function getDocumentUrl(filePath: string): Promise<string | null> {
     return null
   }
 }
+
+/**
+ * Get driver's assigned rides
+ */
+export async function getDriverRides(driverId: string) {
+  try {
+    const supabase = await createClient()
+
+    const { data, error } = await supabase
+      .from('rides')
+      .select('*')
+      .eq('driver_id', driverId)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching driver rides:', error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('Error in getDriverRides:', error)
+    return []
+  }
+}
+
+/**
+ * Accept a ride request
+ */
+export async function acceptRide(rideId: string, driverId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient()
+
+    // Update ride status
+    const { error: updateError } = await supabase
+      .from('rides')
+      .update({
+        status: 'accepted',
+        accepted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', rideId)
+      .eq('driver_id', driverId)
+      .eq('status', 'pending')
+
+    if (updateError) {
+      console.error('Error accepting ride:', updateError)
+      return { success: false, error: 'Failed to accept ride' }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error in acceptRide:', error)
+    return { success: false, error: 'An unexpected error occurred' }
+  }
+}
+
+/**
+ * Reject a ride request
+ */
+export async function rejectRide(rideId: string, driverId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient()
+
+    // Get the ride
+    const { data: ride, error: rideError } = await supabase
+      .from('rides')
+      .select('*')
+      .eq('id', rideId)
+      .eq('driver_id', driverId)
+      .eq('status', 'pending')
+      .single()
+
+    if (rideError || !ride) {
+      return { success: false, error: 'Ride not found' }
+    }
+
+    // Update ride status to cancelled
+    const { error: updateError } = await supabase
+      .from('rides')
+      .update({
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', rideId)
+
+    if (updateError) {
+      console.error('Error rejecting ride:', updateError)
+      return { success: false, error: 'Failed to reject ride' }
+    }
+
+    // Make driver available again
+    await supabase
+      .from('driver_availability')
+      .update({
+        is_available: true,
+        current_ride_id: null,
+        last_updated: new Date().toISOString(),
+      })
+      .eq('driver_id', driverId)
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error in rejectRide:', error)
+    return { success: false, error: 'An unexpected error occurred' }
+  }
+}
+
+/**
+ * Complete a ride
+ */
+export async function completeRide(
+  rideId: string,
+  driverId: string,
+  finalCost: number
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient()
+
+    // Update ride status
+    const { error: updateError } = await supabase
+      .from('rides')
+      .update({
+        status: 'completed',
+        final_cost: finalCost,
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', rideId)
+      .eq('driver_id', driverId)
+      .in('status', ['accepted', 'in_progress'])
+
+    if (updateError) {
+      console.error('Error completing ride:', updateError)
+      return { success: false, error: 'Failed to complete ride' }
+    }
+
+    // Make driver available again
+    await supabase
+      .from('driver_availability')
+      .update({
+        is_available: true,
+        current_ride_id: null,
+        last_updated: new Date().toISOString(),
+      })
+      .eq('driver_id', driverId)
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error in completeRide:', error)
+    return { success: false, error: 'An unexpected error occurred' }
+  }
+}
+
+/**
+ * Cancel an accepted ride
+ */
+export async function cancelAcceptedRide(
+  rideId: string,
+  driverId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient()
+
+    // Update ride status
+    const { error: updateError } = await supabase
+      .from('rides')
+      .update({
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', rideId)
+      .eq('driver_id', driverId)
+      .in('status', ['accepted', 'in_progress'])
+
+    if (updateError) {
+      console.error('Error cancelling ride:', updateError)
+      return { success: false, error: 'Failed to cancel ride' }
+    }
+
+    // Make driver available again
+    await supabase
+      .from('driver_availability')
+      .update({
+        is_available: true,
+        current_ride_id: null,
+        last_updated: new Date().toISOString(),
+      })
+      .eq('driver_id', driverId)
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error in cancelAcceptedRide:', error)
+    return { success: false, error: 'An unexpected error occurred' }
+  }
+}
