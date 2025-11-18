@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { Location } from '@/lib/types/ride'
@@ -18,6 +18,17 @@ interface MapComponentProps {
   pickup: Location | null
   dropoff: Location | null
   onMapClick?: (lat: number, lng: number) => void
+}
+
+function MapClickHandler({ onMapClick }: { onMapClick?: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click: (e) => {
+      if (onMapClick) {
+        onMapClick(e.latlng.lat, e.latlng.lng)
+      }
+    },
+  })
+  return null
 }
 
 function MapUpdater({ pickup, dropoff }: { pickup: Location | null; dropoff: Location | null }) {
@@ -68,16 +79,13 @@ export default function MapComponent({ pickup, dropoff, onMapClick }: MapCompone
         center={center}
         zoom={13}
         style={{ height: '100%', width: '100%' }}
-        onClick={(e) => {
-          if (onMapClick) {
-            onMapClick(e.latlng.lat, e.latlng.lng)
-          }
-        }}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+
+        <MapClickHandler onMapClick={onMapClick} />
 
         {pickup && (
           <Marker position={[pickup.lat, pickup.lng]}>
